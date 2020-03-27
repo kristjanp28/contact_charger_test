@@ -14,15 +14,27 @@ from sensor_msgs.msg import BatteryState
 from docking.srv import *
 
 b_state = BatteryState()
-
-
+twist = Twist()
+speed = 0.1
+x = 0
+y = 0
+z = 0
+th = 0
+turn = 0
 
 rospy.init_node('test_dock')
 
 client = actionlib.SimpleActionClient('move_base',MoveBaseAction)
+pub = rospy.Publisher('cmd_vel', Twist, queue_size = 1)
 docking = rospy.ServiceProxy('dock', Dock)
 client.wait_for_server()
 
+def move(x, y, z, th):
+	twist = Twist()
+	twist.linear.x = x*speed; twist.linear.y = y*speed; twist.linear.z = z*speed;
+	twist.angular.x = 0; twist.angular.y = 0; twist.angular.z = th*turn
+	pub.publish(twist)
+	return
 
 def bat_stat(data):
 	global b_state
@@ -39,11 +51,10 @@ def move_to_pos(X, Y, Rotation):
 	pose.pose.position.y = Y
 	goal = MoveBaseGoal()
 	goal.target_pose = pose
-
 	client.send_goal(goal)
 
 def random_position():
-	x = random.uniform(-0.5,-0.1)
+	x = random.uniform(-1,-0.5)
 	y = random.uniform(-0.5,0.5)
 	rot = 0
 	print(x,y)
@@ -52,12 +63,16 @@ def random_position():
 
 rospy.Subscriber('battery_state', BatteryState, bat_stat)
 
+i = time.time() + 4
+while time.time() < i:
+	move(-1,0,0,0)
+else:
+	twist = Twist()
+	twist.linear.x = 0; twist.linear.y = 0; twist.linear.z = 0;
+	twist.angular.x = 0; twist.angular.y = 0; twist.angular.z = th*turn
+	pub.publish(twist)
 
-move_to_pos(-0.2,0,0)
-time.sleep(2)
-move_to_pos(-0.2,0,0)
+
 random_position()
 print("battery voltage: " + str(b_state.voltage))
-time.sleep(15)
-docking(42, "-.8 -.10 0 0, -.4 -.10 0 0, -.17 -.10 0 0")
 
